@@ -1,5 +1,6 @@
 import socket
 import os
+import time
 from serialization_old import deserialize, serialize, Message, unmarshalling, marshalling
 # from serialization import deserialize, serialize, Message, unmarshalling, marshalling
 
@@ -25,9 +26,11 @@ if __name__ == "__main__":
 
 
         # send response
-        msg_list = marshalling("========response=======", 333333)
+        msg_list = marshalling("+++response+++", 333333)
         # msg_list = marshalling("Error: resent the request!", 9999999)
-        for item in msg_list:
-            # print(len(item))
-            s.sendto(item, Caddr)
-            print("Sent response back!")
+        for i in range(10):
+            for item in msg_list:
+                # print(len(item))
+                s.sendto(item, Caddr)
+                print("Sent response back!")
+            time.sleep(3)
