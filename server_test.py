@@ -26,8 +26,15 @@ if __name__ == "__main__":
 
 
         # send response
-        msg_list = marshalling("+++response+++", 333333)
+        msg_list = marshalling("", 333333)
+        msg_list.append()
         # msg_list = marshalling("Error: resent the request!", 9999999)
+
+
+
+
+
+
         for i in range(10):
             for item in msg_list:
                 # print(len(item))

@@ -1,7 +1,7 @@
 import socket
 import time
-from serialization_old import deserialize, serialize, Message, unmarshalling, marshalling
-# from serialization import deserialize, serialize, Message, unmarshalling, marshalling
+# from serialization_old import deserialize, serialize, Message, unmarshalling, marshalling
+from serialization import deserialize, serialize, Message, unmarshalling, marshalling
 #############新写的那部分哈希有些问题，会报错#################3
 
 options = {
@@ -17,7 +17,6 @@ options = {
 def send_message(socket1, server_addr, request_msg, identifier):
     msg_list = marshalling(request_msg, identifier)
     for item in msg_list:
-        # print(len(item))
         socket1.sendto(item, server_addr)
 
 
@@ -29,8 +28,10 @@ def receive_message(socket1:socket, server_addr, timeout = 5.0):
         socket1.settimeout(timeout)    # 设置超时设置
         try:
             msg_byte, Saddr = socket1.recvfrom(512)
-            msg_byte_list = [msg_byte]
+            msg_byte_list = [msg_byte, ]
             msg_object_temp = deserialize(msg_byte_list[0])
+
+
             block_num = msg_object_temp.total_blocks
             if msg_object_temp.block_index != 0:  # 第一次收到的块不是第一块，肯定出问题了，大概是丢失消息
                 pass    # 有问题，到后面请求重发吧
@@ -57,11 +58,15 @@ def receive_message(socket1:socket, server_addr, timeout = 5.0):
         except socket.timeout:  # 不管是哪一次需要接收消息时超时，就会激活重发
             print("Receive operation timed out")
             resend_flag = 1
+        # 成功接收到完整消息
+        original_text, the_identifier = unmarshalling(msg_byte_list)
+        if original_text == False:
+            resend_flag = 1
+
         # 要求客户端重发信息
         if resend_flag == 1:
             send_message(socket1, server_addr, "Error: Please resent the request!", 999)
-    # 成功接收到完整消息
-    original_text, the_identifier = unmarshalling(msg_byte_list)
+    # 接收到的信息完整且正确
     socket1.setblocking(0)
     return original_text, the_identifier
 

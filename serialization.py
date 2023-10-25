@@ -50,14 +50,14 @@ def marshalling(LargeText, identifier):
     marshalling_block = []
     hash_value = hashlib.md5(LargeText.encode("utf-8")).hexdigest()
 
-    for block_index in range(total_block):
+    for block_index in range(total_block-1):
         start_index = block_index * BLOCK_SIZE
         end_index = start_index + BLOCK_SIZE
         block_data = LargeText[start_index:end_index]
         msg = Message(identifier,len(block_data), block_index, total_block, block_data)
         marshalled_data = serialize(msg)
         marshalling_block.append(marshalled_data)
-    hash_msg = Message(identifier, len(hash_value), total_block, total_block, hash_value)
+    hash_msg = Message(identifier, len(hash_value), total_block-1, total_block, hash_value)
     marshalled_data = serialize(hash_msg)
     marshalling_block.append(marshalled_data)
 
@@ -72,16 +72,16 @@ def unmarshalling(marshalling_block):
     total_num = list[0].total_blocks
     text = []
     for index, i in enumerate(list):
-        if index == i.block_index and index < total_num:
+        if index == i.block_index and index < total_num-1:
             temp1_text = i.data.rstrip(b'\0').decode("utf-8")
             text.append(temp1_text)
-        elif index == total_num:
+        elif index == total_num-1:
             pass
         else:
             return False, identifier
         res = "".join([str(i) for i in text])
     # 下面，检验hash是否一致，不一致则 值返回False与identifier
-    if hashlib.md5(res.encode("utf-8")).hexdigest() == list[total_num].data.rstrip(b'\0').decode("utf-8"):
+    if hashlib.md5(res.encode("utf-8")).hexdigest() == list[total_num-1].data.rstrip(b'\0').decode("utf-8"):
         return res, identifier
     else:
         return False, identifier
