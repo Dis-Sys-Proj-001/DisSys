@@ -153,7 +153,7 @@ def start_server(semantics):
             # 要求客户端重发信息
             if resend_flag == 1:
                 requiring_resend_block = Message(
-                    0, 26, 1, 1, "Error: resent the request!")
+                    0, 26, 1, 1, "Error: resend the request!")
                 server_socket.sendto(serialize(
                     requiring_resend_block), address)
                 resend_times += 1
@@ -207,19 +207,20 @@ def start_server(semantics):
                 response, 0)))
 
         # Send response
-        # # test for packet loss
-        # i = random.randint(0, 10)
-        # if i < 2:
-        #     address = '199.199.199.1'  # no exist ip
-
-        print(f"Sending response: {response}")
-        if response == "exit":
-            break
+        # test for packet loss
+        i = random.randint(0, 10)
+        if i < 5:
+            print(f"Sending response: {response}")
+            if response == "exit":
+                break
+            else:
+                msg_list = marshalling(response, 0)
+                for msg in msg_list:
+                    server_socket.sendto(msg, address)
         else:
-            msg_list = marshalling(response, 0)
-            for msg in msg_list:
-                server_socket.sendto(msg, address)
+            print('test loss of reply')
+            pass
 
 
 if __name__ == "__main__":
-    start_server("at-most-once")
+    start_server("at-least-once")

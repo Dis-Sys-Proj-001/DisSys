@@ -1,3 +1,4 @@
+import random
 import socket
 import time
 from serialization_old import deserialize, serialize, Message, unmarshalling, marshalling
@@ -16,12 +17,17 @@ options = {
 
 
 def send_message(socket1, server_addr, request_msg, identifier):
-    msg_list = marshalling(request_msg, identifier)
-    for item in msg_list:
-        socket1.sendto(item, server_addr)
+    # test for packet loss
+    i = random.randint(0, 10)
+    if i < 5:
+        msg_list = marshalling(request_msg, identifier)
+        for item in msg_list:
+            socket1.sendto(item, server_addr)
+    else:
+        print('test loss of request')
 
 
-def receive_message(socket1: socket, server_addr, timeout=100):
+def receive_message(socket1: socket, server_addr, timeout=10):
     resend_flag = 1  # 重发标志位，若最终为1则接收出错，若最终为0则要求重发
     resend_times = 0
     while resend_flag == 1 and resend_times < 10:
@@ -58,15 +64,19 @@ def receive_message(socket1: socket, server_addr, timeout=100):
             print("Receive operation timed out")
             resend_flag = 1
         # 成功接收到完整消息
-        original_text, the_identifier = unmarshalling(msg_byte_list)
-        if original_text == False or original_text == "Error: resent the request!":  # 但是hash验证失败
+        try:
+            original_text, the_identifier = unmarshalling(msg_byte_list)
+            if original_text == False or original_text == "Error: resend the request!":  # 但是hash验证失败
+                resend_flag = 1
+        except Exception:
             resend_flag = 1
 
         # 要求客户端重发信息
         if resend_flag == 1:
             resend_times = resend_times + 1
-            send_message(socket1, server_addr,
-                         "Error: Please resent the request!", 999)
+            return "Error: resend the request!", 1
+            # send_message(socket1, server_addr,
+            #              "Error: Please resent the request!", 999)
     # 接收到的信息完整且正确
     socket1.setblocking(0)
     return original_text, the_identifier
@@ -169,9 +179,9 @@ def start_Client(server_addr, freshness_interval, semantics):
                 print("发送完毕!")
 
                 # 接收响应
-                response_text, _ = receive_message(c, server_addr, 100)
+                response_text, _ = receive_message(c, server_addr, 10)
                 # 接收失败，重发
-                if response_text == "Error: Please resent the request!":
+                if response_text == "Error: resend the request!":
                     print("请求丢失错误，重发中......")
                 # 接收成功
                 else:
