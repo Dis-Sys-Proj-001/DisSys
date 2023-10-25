@@ -136,7 +136,7 @@ def start_server(semantics):
                     server_socket.settimeout(5.0)
                 for i in range(1, block_num):
                     # 逐次接收后面的块
-                    msg_block, = server_socket.recvfrom(512)
+                    msg_block, _ = server_socket.recvfrom(512)
                     msg_block_list.append(msg_block)
                     received_msg = deserialize(msg_block_list[-1])
                     if received_msg.block_index == i:    # 接收到新块，这块的顺序是对的
