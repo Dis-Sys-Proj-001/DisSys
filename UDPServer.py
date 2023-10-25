@@ -195,7 +195,7 @@ def start_server(semantics):
             elif args[0] == "file_list":
                 response = file_list(args[1])
                 response = ','.join(response)
-            elif args[0] == "rename_list":
+            elif args[0] == "rename_file":
                 response = rename_file(args[1], args[2])
             elif args[0] == "exit":
                 response == "client exit"
