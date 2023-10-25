@@ -165,7 +165,6 @@ def start_server(semantics):
                 server_socket.settimeout(0)
                 break
 
-
         # 接收完请求信息，开始执行请求
         if operation == "exit":
             # response = "client exit"
@@ -173,9 +172,11 @@ def start_server(semantics):
         else:
             args = operation.split(',')
 
+        cache_flag = 1
         # In "at-most-once" mode, check request ID to avoid processing duplicate requests
         if semantics == "at-most-once" and (address, request_id) in processed_request_ids:
             print(f"Duplicate request {request_id}, resending cached reply.")
+            cache_flag = 0
             for cached_reply in buffer:
                 if cached_reply[0] == address and cached_reply[1] == request_id:
                     response = cached_reply[3]
@@ -198,10 +199,10 @@ def start_server(semantics):
                 response == "client exit"
 
         # Record the processed request ID (only in "at-most-once" mode) and cache the reply
-        if semantics == "at-most-once":
+        if semantics == "at-most-once" and cache_flag == 1:
             processed_request_ids.add((address, request_id))
             buffer.append((address, processed_request_ids, marshalling(
-                response,0)))
+                response, 0)))
 
         # Send response
         # # test for packet loss
