@@ -122,7 +122,7 @@ def start_server(semantics):
             try:
                 server_socket.setblocking(True)
                 msg_block, address = server_socket.recvfrom(
-                    512)  # receive all data from client, at most two blocks, 1024bits=128bytes
+                    512)
                 msg_block_list = [msg_block]
                 received_msg = deserialize(msg_block_list[0])
                 block_num = received_msg.total_blocks

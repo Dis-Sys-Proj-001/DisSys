@@ -9,13 +9,10 @@
 ### Todo:
 
 #### client
- - 两种语义
  - 本地文件监视，一旦发生改变就发送信息进行写
 
-#### server
- - caching 应该是id+addres
- - insert 正常返回的是啥？acknowledgement吧（"Succeed!"）
- - monitor_update成功接受后给个acknowledgement吧
+#### server）
+ - 
  - 
 
 #### others

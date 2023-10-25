@@ -59,7 +59,7 @@ def receive_message(socket1: socket, server_addr, timeout=100):
             resend_flag = 1
         # 成功接收到完整消息
         original_text, the_identifier = unmarshalling(msg_byte_list)
-        if original_text == False:  # 但是hash验证失败
+        if original_text == False or original_text == "Error: resent the request!":  # 但是hash验证失败
             resend_flag = 1
 
         # 要求客户端重发信息
