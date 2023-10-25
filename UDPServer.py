@@ -208,7 +208,7 @@ def start_server(semantics):
 
         # Send response
         # # test for packet loss
-        # i = random.randint(10)
+        # i = random.randint(0, 10)
         # if i < 2:
         #     address = '199.199.199.1'  # no exist ip
 
