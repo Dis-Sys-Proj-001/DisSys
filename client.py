@@ -21,7 +21,7 @@ def send_message(socket1, server_addr, request_msg, identifier):
 
 
 
-def receive_message(socket1:socket, server_addr, timeout = 5.0):
+def receive_message(socket1:socket, server_addr, timeout = 100):
     resend_flag = 1 # 重发标志位，若最终为1则接收出错，若最终为0则要求重发
     
     while resend_flag == 1:
@@ -174,7 +174,7 @@ def start_Client(server_addr, freshness_interval, semantics):
                 print("发送完毕!")
 
                 # 接收响应
-                response_text, _ = receive_message(c, server_addr, 5)   
+                response_text, _ = receive_message(c, server_addr, 100)   
                 # 接收失败，重发
                 if response_text == "Error: Please resent the request!":
                     print("请求丢失错误，重发中......")
