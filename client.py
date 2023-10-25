@@ -1,7 +1,7 @@
 import socket
 import time
-# from serialization_old import deserialize, serialize, Message, unmarshalling, marshalling
-from serialization import deserialize, serialize, Message, unmarshalling, marshalling
+from serialization_old import deserialize, serialize, Message, unmarshalling, marshalling
+# from serialization import deserialize, serialize, Message, unmarshalling, marshalling
 #############新写的那部分哈希有些问题，会报错#################3
 
 options = {
@@ -23,8 +23,8 @@ def send_message(socket1, server_addr, request_msg, identifier):
 
 def receive_message(socket1:socket, server_addr, timeout = 100):
     resend_flag = 1 # 重发标志位，若最终为1则接收出错，若最终为0则要求重发
-    
-    while resend_flag == 1:
+    resend_times = 0
+    while resend_flag == 1 and resend_times < 10:
         socket1.settimeout(timeout)    # 设置超时设置
         try:
             msg_byte, Saddr = socket1.recvfrom(512)
@@ -60,11 +60,12 @@ def receive_message(socket1:socket, server_addr, timeout = 100):
             resend_flag = 1
         # 成功接收到完整消息
         original_text, the_identifier = unmarshalling(msg_byte_list)
-        if original_text == False:
+        if original_text == False:  # 但是hash验证失败
             resend_flag = 1
 
         # 要求客户端重发信息
         if resend_flag == 1:
+            resend_times = resend_times + 1
             send_message(socket1, server_addr, "Error: Please resent the request!", 999)
     # 接收到的信息完整且正确
     socket1.setblocking(0)

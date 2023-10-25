@@ -27,7 +27,7 @@ def serialize(msg):
 def deserialize(packed_data):
     # 解封装字节对象为一个消息对象
     fmt = f'I I I I {BLOCK_SIZE}s'
-    print("swssssssssssssssssssssssssssssss",len(packed_data))
+    print("deserialize in process!")
     unpacked_data = struct.unpack(fmt, packed_data)
     modified_data = unpacked_data[:-1] + (unpacked_data[-1] + b'\0',)
     return Message(*modified_data)
@@ -84,6 +84,7 @@ def unmarshalling(marshalling_block):
     if hashlib.md5(res.encode("utf-8")).hexdigest() == list[total_num-1].data.rstrip(b'\0').decode("utf-8"):
         return res, identifier
     else:
+        print("hash not fix!")
         return False, identifier
     return res, identifier
 
