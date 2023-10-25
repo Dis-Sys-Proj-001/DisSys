@@ -19,7 +19,7 @@ def read_file(pathname, offset, read_length):
         f.seek(offset)
         content = f.read(read_length)
 
-    return content
+    return str(content)
 
 
 def insert_content(pathname, offset, sequence):
@@ -29,7 +29,7 @@ def insert_content(pathname, offset, sequence):
 
     file_size = os.path.getsize(pathname)
     if offset > file_size:
-        return "Offset exceeds file size!"
+        return f"Offset {offset} exceeds file size {file_size}!"
 
     with open(pathname, 'rb') as f:
         initial_content = f.read(offset)
@@ -41,7 +41,7 @@ def insert_content(pathname, offset, sequence):
 
     # 插入序列并重写文件
     with open(pathname, 'wb') as f:
-        f.write(initial_content + sequence + remaining_content)
+        f.write(initial_content + bytes(sequence, 'utf-8') + remaining_content)
 
     return "Insertion successful"
 
@@ -125,7 +125,7 @@ def start_server(semantics):
                 msg_block_list = [msg_block]
                 received_msg = deserialize(msg_block_list[0])
                 block_num = received_msg.total_blocks
-                print(f"Received message: {received_msg.data}")
+                print("Received message:", received_msg.data.decode("utf-8"))
                 if received_msg.block_index != 0:  # 第一次收到的块不是第一块，肯定出问题了，大概是丢失消息
                     pass    # 有问题，到后面请求重发吧
                 elif block_num == 1:    # 这是一个单块的请求
@@ -185,7 +185,7 @@ def start_server(semantics):
             response = "Invalid request"
             if args[0] == "read_file":
                 response = read_file(args[1], int(args[2]), int(args[3]))
-            elif args[0] == "insert_file":
+            elif args[0] == "insert_content":
                 response = insert_content(args[1], int(args[2]), args[3])
             elif args[0] == "monitor_updates":
                 response = "Monitoring started"
@@ -193,6 +193,7 @@ def start_server(semantics):
                                 address, address_list, server_socket)
             elif args[0] == "file_list":
                 response = file_list(args[1])
+                response = ','.join(response)
             elif args[0] == "rename_list":
                 response = rename_file(args[1], args[2])
             elif args[0] == "exit":
