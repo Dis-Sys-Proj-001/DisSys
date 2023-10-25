@@ -69,11 +69,12 @@ def monitor_updates(pathname, monitor_interval, address, address_list, server_so
                 last_modified_time = new_modified_time
                 with open(pathname, 'rb') as f:
                     content = f.read()
-                    content = marshalling(
-                        0, content)
+                    contents = marshalling(
+                        str(content), 0)
                 # 向所有已注册的客户端发送更新后的文件内容
                 for addresses in address_list:
-                    server_socket.sendto(content, addresses)
+                    for content in contents:
+                        server_socket.sendto(content, addresses)
         except FileNotFoundError:
             pass
 
