@@ -1,7 +1,8 @@
+import random
 import socket
 import os
 import time
-from serialization import deserialize, serialize, Message
+from serialization import unmarshalling, marshalling, serialize, deserialize, Message
 
 
 def read_file(pathname, offset, read_length):
@@ -67,8 +68,8 @@ def monitor_updates(pathname, monitor_interval, address, address_list, server_so
                 last_modified_time = new_modified_time
                 with open(pathname, 'rb') as f:
                     content = f.read()
-                    content = serialize(
-                        Message(0, len(content), 1, 1, content))
+                    content = marshalling(
+                        0, content)
                 # 向所有已注册的客户端发送更新后的文件内容
                 for addresses in address_list:
                     server_socket.sendto(content, addresses)
@@ -109,49 +110,67 @@ def start_server(semantics):
     processed_request_ids = set()
     # Store all addresses of clients requiring monitor
     address_list = []
-
+    # Store past reply message
     buffer = []
 
-    while True:
+    resend_times = 0
+    while resend_times < 10:
         # resend if flag is 1
         resend_flag = 1
 
         while resend_flag == 1:
-            msg_block, address = server_socket.recvfrom(512)
-            received_msg = deserialize(msg_block)
-            print(f"Received message: {received_msg.data.decode('utf-8')}")
-
-            if (msg_block.block_index == 0) and (msg_block.total_blocks == 1):    # 这是一个单块的请求
-                msg = str(msg_block.data)
-                resend_flag = 0  # 成功接收信息
-            elif (msg_block.block_index == 0) and (msg_block.total_blocks != 1):  # 这是一个多块的请求，这是收到的第一块
-                msg = str(msg_block.data)
-                # 设置超时时间，单位为秒
-                server_socket.settimeout(5.0)
-                for i in range(1, msg_block.total_blocks):
+            try:
+                msg_block, address = server_socket.recvfrom(
+                    512)  # receive all data from client, at most two blocks, 1024bits=128bytes
+                msg_block_list = [msg_block]
+                received_msg = deserialize(msg_block_list[0])
+                block_num = received_msg.total_blocks
+                print(f"Received message: {received_msg}".decode("utf-8"))
+                if received_msg.block_index != 0:  # 第一次收到的块不是第一块，肯定出问题了，大概是丢失消息
+                    pass    # 有问题，到后面请求重发吧
+                elif block_num == 1:    # 这是一个单块的请求
+                    resend_flag = 0  # 成功接收信息
+                elif block_num != 1:  # 这是一个多块的请求，这是收到的第一块
+                    # msg = str(deserialize(msg_list[0]).data)
+                    # 设置超时时间，单位为秒
+                    server_socket.settimeout(5.0)
+                for i in range(1, block_num):
                     # 逐次接收后面的块
-                    try:
-                        msg_block = deserialize(server_socket.recvfrom(512))
-                    except socket.timeout:  # 超时
-                        resend_flag = 1
-                        break
-                    if (msg_block.block_index == i):    # 接收到新块，且该块的顺序是对的
-                        msg = msg + str(msg_block.data)
+                    msg_block, = server_socket.recvfrom(512)
+                    msg_block_list.append(msg_block)
+                    received_msg = deserialize(msg_block_list[-1])
+                    if received_msg.block_index == i:    # 接收到新块，这块的顺序是对的
+                        if block_num == received_msg.block_index:  # 这是不是分块消息的最后一块
+                            resend_flag = 0  # 最后一块也成功接收了，整条请求接收完毕
                     else:   # 接收到的顺序是乱的
                         resend_flag = 1
                         break
-                resend_flag = 0  # 成功接收信息
-            else:  # 第一次收到的块不是第一块，肯定出问题了
+
+            except socket.timeout:
+                print('client timeout, requiring resend')
                 resend_flag = 1
             # 要求客户端重发信息
-            requiring_resend_block = Message(
-                0, 26, 1, 1, "Error: resent the request!")
-            server_socket.sendto(serialize(requiring_resend_block), address)
+            if resend_flag == 1:
+                requiring_resend_block = Message(
+                    0, 26, 1, 1, "Error: resent the request!")
+                server_socket.sendto(serialize(
+                    requiring_resend_block), address)
+                resend_times += 1
+            # receive complete msg
+            else:
+                original_text, identifier = unmarshalling(msg_block_list)
+                # socket1.setblocking(0)
+                return original_text, identifier
 
         # Parse request
-        request_id = msg[1]
-        operation = msg[0]
-        args = operation.split(',')
+        request_id = identifier
+        operation = original_text
+
+        if operation == "exit":
+            # response = "client exit"
+            args = operation
+        else:
+            args = operation.split(',')
 
         # In "at-most-once" mode, check request ID to avoid processing duplicate requests
         if semantics == "at-most-once" and (address, request_id) in processed_request_ids:
@@ -162,26 +181,41 @@ def start_server(semantics):
         else:
             # Perform operation
             response = "Invalid request"
-            if args[0] == "read":
+            if args[0] == "read_file":
                 response = read_file(args[1], int(args[2]), int(args[3]))
-            elif args[0] == "insert":
+            elif args[0] == "insert_file":
                 response = insert_content(args[1], int(args[2]), args[3])
-            elif args[0] == "monitor":
+            elif args[0] == "monitor_updates":
                 response = "Monitoring started"
                 monitor_updates(args[1], int(args[2]),
                                 address, address_list, server_socket)
-            elif args[0] == "list_all_files":
+            elif args[0] == "file_list":
                 response = file_list(args[1])
-            elif args[0] == "rename":
+            elif args[0] == "rename_list":
                 response = rename_file(args[1], args[2])
+            elif args[0] == "exit":
+                response == "client exit"
 
         # Record the processed request ID (only in "at-most-once" mode) and cache the reply
         if semantics == "at-most-once":
             processed_request_ids.add((address, request_id))
-            buffer.append((address, processed_request_ids, serialize(
-                Message(0, len(response), 1, 1, response))))
+            buffer.append((address, processed_request_ids, marshalling(
+                0, response)))
 
         # Send response
+        # test for packet loss
+        i = random.randint(10)
+        if i < 2:
+            address = '199.199.199.1'  # no exist ip
+
         print(f"Sending response: {response}")
-        server_socket.sendto(
-            serialize(Message(0, len(response), 1, 1, response)), address)
+        if response == "exit":
+            break
+        else:
+            msg_list = marshalling(0, response)
+            for msg in msg_list:
+                server_socket.sendto(msg, address)
+
+
+if __name__ == "__main__":
+    start_server("at-most-once")
