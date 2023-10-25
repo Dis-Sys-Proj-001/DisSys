@@ -114,13 +114,12 @@ def start_server(semantics):
     # Store past reply message
     buffer = []
 
-    resend_times = 0
-    while resend_times < 10:
-        # resend if flag is 1
+    while True:
+        resend_times = 0
         resend_flag = 1
-
-        while resend_flag == 1:
+        while resend_flag == 1 and resend_times < 10:
             try:
+                server_socket.setblocking(True)
                 msg_block, address = server_socket.recvfrom(
                     512)  # receive all data from client, at most two blocks, 1024bits=128bytes
                 msg_block_list = [msg_block]
@@ -160,13 +159,14 @@ def start_server(semantics):
             # receive complete msg
             else:
                 original_text, identifier = unmarshalling(msg_block_list)
+                # 成功收到正确信息
+                request_id = identifier
+                operation = original_text
+                server_socket.settimeout(0)
                 break
-                # socket1.setblocking(0)
-                # return original_text, identifier
-        # 成功收到正确信息
-        request_id = identifier
-        operation = original_text
 
+
+        # 接收完请求信息，开始执行请求
         if operation == "exit":
             # response = "client exit"
             args = operation
