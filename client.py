@@ -76,7 +76,7 @@ def start_Client(server_addr, freshness_interval, semantics):
         "1": {"display_name": "Read", "function_name": "read_file", "params": 3},
         "2": {"display_name": "Insert", "function_name": "insert_content", "params": 3},
         "3": {"display_name": "Monitor updates", "function_name": "monitor_updates", "params": 2},
-        "4": {"display_name": "File list", "function_name": "file_list", "params": 1},
+        "4": {"display_name": "View file list", "function_name": "file_list", "params": 1},
         "5": {"display_name": "Rename file", "function_name": "rename_file", "params": 2},
         "6": {"display_name": "Manual Input", "function_name": "", "params": 4},
         "7": {"display_name": "Exit", "function_name": "Exit", "params": 0}
@@ -92,6 +92,7 @@ def start_Client(server_addr, freshness_interval, semantics):
             break
 
         if choice in options:
+            print(f"执行功能：{options[choice]['display_name']}")
             num_params = options[choice]['params']
             parameters = get_parameters(num_params)
             if choice == "6": 
@@ -110,8 +111,8 @@ def start_Client(server_addr, freshness_interval, semantics):
 
                 # 接收响应
                 response_text, _ = receive_message(c, server_addr, 5)   
-                print("Received response:", response_text)
-                if response_text != "Error: Please resent the request!":
+                # print("Received response:", response_text)
+                if response_text == "Error: Please resent the request!":
                     print("请求丢失错误，重发中......")
                 else: 
                     success = 1
@@ -135,7 +136,7 @@ if __name__ == "__main__":
     host = '127.0.0.1'
     server_addr = (host, 25896)
 
-    c = start_Client(65536, server_addr)
+    c = start_Client(server_addr, 65536, "at-most-once")
 
 
 

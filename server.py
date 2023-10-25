@@ -14,11 +14,9 @@ if __name__ == "__main__":
     print('UDP Server on', addr[0], ":",addr[1],"......")
 
 
-
     while True:
-        # c, addr = s.accept()
 
-        # receive requeat
+        # receive request
         msg_byte, Caddr = s.recvfrom(512)
         msg_byte_list = [msg_byte]
         request_text, the_identifier = unmarshalling(msg_byte_list)
