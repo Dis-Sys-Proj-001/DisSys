@@ -201,24 +201,24 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
                             print("cache:\n", read_buffer)
 
                     elif choice == "3":  # Listening for updates
-                        # if response_text == "Succeed!":
-                        if 1 == 1:
-                            print("Start listening. Listening",
-                                  msg_list[2], "s")
-                            # Set the socket to non-blocking mode
-                            c.setblocking(0)
-                            start_time = time.time()
-                            while time.time() - start_time < float(msg_list[2]):
-                                try:
-                                    data1, Saddr = receive_message(
-                                        c, server_addr, 0)
-                                    print("Received data:",
-                                          data1, "from", Saddr)
-                                    print("Updated file: \n", data1)
-                                    data1 = ""
-                                except socket.error:
-                                    # No data is coming. Keep waiting
-                                    pass
+                        if response_text == "Monitor started":
+                            if 1 == 1:
+                                print("Start listening. Listening", msg_list[2], "s")
+                                # Set the socket to non-blocking mode
+                                c.setblocking(0)
+                                start_time = time.time()
+                                while time.time() - start_time < (float(msg_list[2])+10.0):
+                                    try:
+                                        data1, Saddr = receive_message(
+                                            c, server_addr, 65536)
+                                        print("Received data:", data1, "from", Saddr)
+                                        print("Updated file: \n", data1)
+                                        data1 = ""
+                                    except socket.error:
+                                        # No data is coming. Keep waiting
+                                        pass
+                        else:
+                            print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
         else:   # choice input is not in selection list
             print("Invalid selection, please re-enter!")
     return c

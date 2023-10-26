@@ -48,7 +48,7 @@ def insert_content(pathname, offset, sequence):
 
 def monitor_updates(pathname, monitor_interval, address, address_list, server_socket):
     # The last update time of the stored file
-    last_modified_time = 0
+    last_modified_time = os.path.getmtime(pathname)
 
     # Record the time when the monitoring starts
     monitor_start_time = time.time()
@@ -59,18 +59,19 @@ def monitor_updates(pathname, monitor_interval, address, address_list, server_so
         # If the monitoring interval is exceeded, exit the loop
         if time.time() - monitor_start_time >= monitor_interval:
             address_list.remove(address)
+            for expire_alert in marshalling("Monitor-interval expired", 0):
+                server_socket.sendto(expire_alert, address)
             break
 
         try:
             # Gets the last update time of the file
             new_modified_time = os.path.getmtime(pathname)
-            if new_modified_time != last_modified_time:
+            if new_modified_time - last_modified_time > 0.5:
                 # If the file is updated
                 last_modified_time = new_modified_time
                 with open(pathname, 'rb') as f:
                     content = f.read()
-                    contents = marshalling(
-                        str(content), 0)
+                    contents = marshalling(str(content), 0)
                 # Send the updated file content to all registered clients
                 for addresses in address_list:
                     for content in contents:
@@ -182,15 +183,20 @@ def start_server(semantics):
                     response = cached_reply[3]
         else:
             # Perform operation
-            response = "Invalid request"
+
             if args[0] == "read_file":
                 response = read_file(args[1], int(args[2]), int(args[3]))
             elif args[0] == "insert_content":
                 response = insert_content(args[1], int(args[2]), args[3])
             elif args[0] == "monitor_updates":
-                # response = "Monitoring started"
-                monitor_updates(args[1], int(args[2]),
-                                address, address_list, server_socket)
+                response = "Monitor started"
+
+                msg_list = marshalling(response, 0)
+                for msg in msg_list:
+                    server_socket.sendto(msg, address)
+
+
+                monitor_updates(args[1], int(args[2]),address, address_list, server_socket)
             elif args[0] == "file_list":
                 response = file_list(args[1])
                 if response == "Path error or not found!":
@@ -201,12 +207,13 @@ def start_server(semantics):
                 response = rename_file(args[1], args[2])
             elif args[0] == "exit":
                 response == "client exit"
+            else:
+                response = "Invalid request"
 
         # Record the processed request ID (only in "at-most-once" mode) and cache the reply
         if semantics == "at-most-once" and cache_flag == 1:
             processed_request_ids.add((address, request_id))
-            buffer.append((address, processed_request_ids, marshalling(
-                response, 0)))
+            buffer.append((address, processed_request_ids, marshalling(response, 0)))
 
         # Send response
         # test for packet loss
@@ -225,7 +232,7 @@ def start_server(semantics):
 
 
 if __name__ == "__main__":
-    semantic = input("Choose server mode:[M/L]")
+    semantic = input("Choose server mode[M/L]:")
     semantic = "at-most-once" if semantic == "M" else semantic == "at-least-once"
     print('Server mode:', semantic)
     start_server(semantic)
