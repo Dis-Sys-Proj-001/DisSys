@@ -86,7 +86,7 @@ def file_list(pathname):
     try:
         items = os.listdir(pathname)
         return items
-    except FileNotFoundError and NotADirectoryError:
+    except (FileNotFoundError , NotADirectoryError):
         return "Path error or not found!"
 
 
@@ -102,12 +102,17 @@ def rename_file(old_path, new_name):
         return f"An error occurred: {e}"
 
 
-def start_server(semantics):
+def start_server(semantics, server_addr):
     # Create a UDP socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind(('localhost', 25896))
 
-    print('UDP Server on', '127.0.0.1', ":", 25896, "......")
+
+    # server_socket.bind(('localhost', 25896))
+    # server_socket.bind(('192.168.0.243', 2222))
+    server_socket.bind(server_addr)
+
+    print('UDP Server on', server_addr[0], ":", server_addr[1], "......")
+    # print('UDP Server on', '127.0.0.1', ":", 25896, "......")
 
     # Store processed request IDs for deduplication (only used in "at-most-once" mode)
     processed_request_ids = set()
@@ -218,7 +223,7 @@ def start_server(semantics):
         # Send response
         # test for packet loss
         i = random.randint(0, 10)
-        if i < 11:
+        if i < 5:
             print(f"Sending response: {response}")
             if response == "exit":
                 break
@@ -232,7 +237,11 @@ def start_server(semantics):
 
 
 if __name__ == "__main__":
+
+    server_addr = ('localhost', 2222)
+    # server_addr = ('192.168.0.243', 2222)
+
     semantic = input("Choose server mode[M/L]:")
     semantic = "at-most-once" if semantic == "M" else semantic == "at-least-once"
     print('Server mode:', semantic)
-    start_server(semantic)
+    start_server(semantic,server_addr)

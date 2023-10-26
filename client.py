@@ -75,6 +75,8 @@ def receive_message(socket1: socket, server_addr, timeout=10):
             resend_times = resend_times + 1
             print("Error! Resent the request")
             original_text = "Error: resend the request!"
+            the_identifier = 0
+            break
 
     # Message successfully received
     socket1.setblocking(0)
@@ -181,13 +183,15 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
                 print("-Request: \n", request_msg, "\n-Sent!")
 
                 # Receive answer
-                response_text, _ = receive_message(c, server_addr, 10)
+                response_text, _ = receive_message(c, server_addr, 5)
                 # resend
                 if response_text == "Error: resend the request!":
+                    success = 0
                     print("Request/Reply error, retransmission......")
                 # successfully received response
                 else:
                     success = 1
+                    # print("success return!")
                     # print("Received response:", response_text)
 
                     # Action after receiving
@@ -224,8 +228,10 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
     return c
 
 
+
 if __name__ == "__main__":
-    host = '127.0.0.1'
-    server_addr = (host, 25896)
+    # host = '127.0.0.1'
+    # server_addr = ('localhost', 25896)
+    server_addr = ('139.9.246.66', 2222)
 
     c = start_Client(server_addr, 10, "at-most-once")
