@@ -98,7 +98,7 @@ def echo_response(msg_list, response_text):
             print("Fail insertion: ", response_text)
 
     elif function_name == 'monitor_updates':
-        pass    # 写在主循环里了
+        pass    # elsewhere
 
     elif function_name == 'file_list':
         if response_text == "Path error or not found!":
@@ -198,9 +198,8 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
 
                         # Read something new. Update the cache
                         if choice == "1":
-                            read_buffer[tuple(parameters)] = [
-                                response_text, time.time()]
-                            print("cache:\n", read_buffer)
+                            read_buffer[tuple(parameters)] = [response_text, time.time()]
+                            # print("cache:\n", read_buffer)
 
                     elif choice == "3":  # Listening for updates
                         if response_text == "Monitor started":
@@ -228,8 +227,8 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
 
 
 if __name__ == "__main__":
-    # host = '127.0.0.1'
-    # server_addr = ('localhost', 25896)
-    server_addr = ('139.9.246.66', 2222)
+
+    # server_addr = ('139.9.246.66', 2222)
+    server_addr = ('127.0.0.1', 2222)
 
     c = start_Client(server_addr, 10, "at-most-once")

@@ -113,7 +113,7 @@ def start_server(semantics, server_addr):
     # Store all addresses of clients requiring monitor
     address_list = []
     # Store past reply message
-    buffer = []
+    cache = []
 
     while True:
         resend_flag = 1  # Resend flag, if 1 in the end, there is a reception error
@@ -181,7 +181,7 @@ def start_server(semantics, server_addr):
         if semantics == "at-most-once" and (address, request_id) in processed_request_ids:
             print(f"Duplicate request {request_id}, resending cached reply.")
             cache_flag = 0
-            for cached_reply in buffer:
+            for cached_reply in cache:
                 if cached_reply[0] == address and cached_reply[1] == request_id:
                     response = cached_reply[3]
         else:
@@ -213,12 +213,12 @@ def start_server(semantics, server_addr):
         # Record the processed request ID (only in "at-most-once" mode) and cache the reply
         if semantics == "at-most-once" and cache_flag == 1:
             processed_request_ids.add((address, request_id))
-            buffer.append((address, processed_request_ids, marshalling(response, 0)))
+            cache.append((address, processed_request_ids, marshalling(response, 0)))
 
         # Send response
         # test for packet loss
         i = random.randint(0, 10)
-        if i < 5:
+        if i < 11:
             print(f"Sending response: {response}")
             if response == "exit":
                 break
@@ -237,6 +237,6 @@ if __name__ == "__main__":
     # server_addr = ('192.168.0.243', 2222)
 
     semantic = input("Choose server mode[M/L]:")
-    semantic = "at-most-once" if semantic == "M" else semantic == "at-least-once"
+    semantic = "at-most-once" if semantic == "M" else "at-least-once"
     print('Server mode:', semantic)
     start_server(semantic,server_addr)

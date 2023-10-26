@@ -40,8 +40,7 @@ def test():
 def marshalling(LargeText, identifier):
     total_block = (len(LargeText) + BLOCK_SIZE - 1) // BLOCK_SIZE
     marshalling_block = []
-    hash_value = hashlib.md5(LargeText.encode("utf-8")).hexdigest()
-
+    hash_value = hashlib.md5(LargeText.encode("utf-8")).hexdigest() # integrity check
     for block_index in range(total_block-1):
         start_index = block_index * BLOCK_SIZE
         end_index = start_index + BLOCK_SIZE
@@ -52,7 +51,6 @@ def marshalling(LargeText, identifier):
     hash_msg = Message(identifier, len(hash_value), total_block-1, total_block, hash_value)
     marshalled_data = serialize(hash_msg)
     marshalling_block.append(marshalled_data)
-
     return marshalling_block
 
 def unmarshalling(marshalling_block):
@@ -78,7 +76,7 @@ def unmarshalling(marshalling_block):
     else:
         print("hash not fix!")
         return False, identifier
-    return res, identifier
+
 
 if __name__ == "__main__":
     ## Marshalling requires two parameters, the string to be sent and the identifier
