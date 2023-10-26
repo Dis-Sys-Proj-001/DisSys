@@ -3,7 +3,7 @@ import socket
 import time
 from serialization_old import deserialize, serialize, Message, unmarshalling, marshalling
 # from serialization import deserialize, serialize, Message, unmarshalling, marshalling
-# 新写的那部分哈希有些问题，会报错#################3
+
 
 options = {
     "1": {"display_name": "Read", "function_name": "read_file", "params": 3},
@@ -19,7 +19,7 @@ options = {
 def send_message(socket1, server_addr, request_msg, identifier):
     # test for packet loss
     i = random.randint(0, 10)
-    if i < 5:
+    if i < 11:
         msg_list = marshalling(request_msg, identifier)
         for item in msg_list:
             socket1.sendto(item, server_addr)
@@ -87,41 +87,41 @@ def echo_response(msg_list, response_text):
     function_name = msg_list[0]
     if function_name == 'read_file':
         content = response_text
-        print("读取成功！文件内容如下：")
+        print("Read success! The contents of the file are as follows:")
         # print(content.decode('utf-8'))
         print(content)
 
     elif function_name == 'insert_content':
         if response_text == "Insertion successful":
-            print("插入成功")
+            print("Successful insertion")
         else:
-            print("插入失败：", response_text)
+            print("Fail insertion：", response_text)
 
     elif function_name == 'monitor_updates':
         pass    # 写在主循环里了
 
     elif function_name == 'file_list':
         if response_text == "Path not found!":
-            print("获取失败：", response_text)
+            print("Failed to get", response_text)
         else:
-            print("文件列表如下：")
+            print("file list：")
             print(response_text)
 
     elif function_name == 'rename_file':
         if response_text == "Rename successful":
             print("Rename successful!")
         else:
-            print("重命名失败：", response_text)
+            print("Rename unsuccessful：", response_text)
 
     else:
-        print("未知的操作名：", function_name)
-        print("响应内容：", response_text)
+        print("unknown operation：", function_name)
+        print("response：", response_text)
 
 
 def get_parameters(num_params):
     parameters = []
     for i in range(num_params):
-        param = input(f"请输入参数 {i+1}: ")
+        param = input(f"parameter {i+1}: ")
         parameters.append(param)
     return parameters
 
@@ -132,17 +132,17 @@ def start_Client(server_addr, freshness_interval, semantics):
     read_buffer = {}
 
     while True:
-        print("==============功能列表=================")
+        print("==============function list=================")
         for k, v in options.items():
             print(f"{k}. {v['display_name']}")
-        choice = input("请选择要使用的功能，输入序号(1-7): ")
+        choice = input("Please select the function you want to use and enter the serial number(1-7): ")
 
         if choice == "7":
-            print("成功退出程序！")
+            print("Successfully exit！")
             break
 
         if choice in options:
-            print(f"执行功能：{options[choice]['display_name']}")
+            print(f"perform function：{options[choice]['display_name']}")
             num_params = options[choice]['params']
             parameters = get_parameters(num_params)
             # 对于特殊功能的判断
@@ -169,36 +169,36 @@ def start_Client(server_addr, freshness_interval, semantics):
                 msg_list = [options[choice]['function_name']] + parameters
             print(msg_list)
             request_msg = f"{','.join(msg_list)}"
-            print("发送的命令：", request_msg)
+            print("request sent：", request_msg)
 
             # 发送请求
             identifier = (identifier + 1) % 256
             success = 0
             while success != 1:
                 send_message(c, server_addr, request_msg, identifier)
-                print("发送完毕!")
+                print("Sent!")
 
                 # 接收响应
                 response_text, _ = receive_message(c, server_addr, 10)
                 # 接收失败，重发
                 if response_text == "Error: resend the request!":
-                    print("请求丢失错误，重发中......")
+                    print("Request lost error, retransmission......")
                 # 接收成功
                 else:
                     success = 1
                     # print("Received response:", response_text)
-                    # 进行收到后的操作
+                    # Act upon receipt
                     if choice != "3":
                         echo_response(msg_list, response_text)
-                        if choice == "1":  # 读到新东西了，更新cache一下
+                        if choice == "1":  # You read something new. Update the cache
                             read_buffer[tuple(parameters)] = response_text
                             print("cache:\n", read_buffer)
 
-                    elif choice == "3":  # 监听更新
+                    elif choice == "3":  # Listening for updates
                         # if response_text == "Succeed!":
                         if 1 == 1:
-                            print("开始监听，监听", msg_list[2], "秒")
-                            # 设置socket为非阻塞模式
+                            print("Start listening. Listening", msg_list[2], "s")
+                            # Set the socket to non-blocking mode
                             c.setblocking(0)
                             start_time = time.time()
                             while time.time() - start_time < float(msg_list[2]):
@@ -210,10 +210,10 @@ def start_Client(server_addr, freshness_interval, semantics):
                                     print("Updated file: \n", data1)
                                     data1 = ""
                                 except socket.error:
-                                    # 没有数据到来，继续等待
+                                    # No data is coming. Keep waiting
                                     pass
         else:
-            print("无效的选择，请重新输入!")
+            print("Invalid selection, please re-enter!")
     return c
 
 
@@ -223,12 +223,3 @@ if __name__ == "__main__":
 
     c = start_Client(server_addr, 65536, "at-most-once")
 
-    # # 发送请求
-    # request_msg = "---------Requset----------"
-    # identifier = (identifier + 1) %256
-    # send_message(c, server, request_msg, identifier)
-    # print("Sent request!")
-
-    # # 接收响应
-    # response_text, _ = receive_message(c)
-    # print("Received response:", response_text)

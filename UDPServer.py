@@ -34,12 +34,12 @@ def insert_content(pathname, offset, sequence):
     with open(pathname, 'rb') as f:
         initial_content = f.read(offset)
 
-    # 读取文件从偏移量到结束的内容
+    # Reads the contents of a file from the offset to the end
     with open(pathname, 'rb') as f:
         f.seek(offset)
         remaining_content = f.read()
 
-    # 插入序列并重写文件
+    # Insert the sequence and overwrite the file
     with open(pathname, 'wb') as f:
         f.write(initial_content + bytes(sequence, 'utf-8') + remaining_content)
 
@@ -47,38 +47,38 @@ def insert_content(pathname, offset, sequence):
 
 
 def monitor_updates(pathname, monitor_interval, address, address_list, server_socket):
-    # 存储文件的最后更新时间
+    # The last update time of the stored file
     last_modified_time = 0
 
-    # 记录监控开始的时间
+    # Record the time when the monitoring starts
     monitor_start_time = time.time()
 
     address_list.append(address)
 
     while True:
-        # 如果超过了监控间隔，退出循环
+        # If the monitoring interval is exceeded, exit the loop
         if time.time() - monitor_start_time >= monitor_interval:
             address_list.remove(address)
             break
 
         try:
-            # 获取文件的最后更新时间
+            # Gets the last update time of the file
             new_modified_time = os.path.getmtime(pathname)
             if new_modified_time != last_modified_time:
-                # 如果文件被更新
+                # If the file is updated
                 last_modified_time = new_modified_time
                 with open(pathname, 'rb') as f:
                     content = f.read()
                     contents = marshalling(
                         str(content), 0)
-                # 向所有已注册的客户端发送更新后的文件内容
+                # Send the updated file content to all registered clients
                 for addresses in address_list:
                     for content in contents:
                         server_socket.sendto(content, addresses)
         except FileNotFoundError:
             pass
 
-        time.sleep(1)  # 每秒检查一次
+        time.sleep(1)  # Check it every second
 
 
 def file_list(pathname):
@@ -127,30 +127,29 @@ def start_server(semantics):
                 received_msg = deserialize(msg_block_list[0])
                 block_num = received_msg.total_blocks
                 print("Received message:", received_msg.data.decode("utf-8"))
-                if received_msg.block_index != 0:  # 第一次收到的块不是第一块，肯定出问题了，大概是丢失消息
-                    pass    # 有问题，到后面请求重发吧
-                elif block_num == 1:    # 这是一个单块的请求
-                    resend_flag = 0  # 成功接收信息
-                elif block_num != 1:  # 这是一个多块的请求，这是收到的第一块
-                    # msg = str(deserialize(msg_list[0]).data)
-                    # 设置超时时间，单位为秒
+                if received_msg.block_index != 0:  # The first block received is not the first block; something must be wrong, probably a lost message
+                    pass    # problem
+                elif block_num == 1:    # single block
+                    resend_flag = 0  # receiving message succeed
+                elif block_num != 1:  # multiply blocks
+                    # Sets the timeout in seconds
                     server_socket.settimeout(5.0)
                     for i in range(1, block_num):
-                        # 逐次接收后面的块
+                        # The subsequent blocks are received one by one
                         msg_block, _ = server_socket.recvfrom(512)
                         msg_block_list.append(msg_block)
                         received_msg = deserialize(msg_block_list[-1])
-                        if received_msg.block_index == i:    # 接收到新块，这块的顺序是对的
-                            if block_num == received_msg.block_index:  # 这是不是分块消息的最后一块
-                                resend_flag = 0  # 最后一块也成功接收了，整条请求接收完毕
-                        else:   # 接收到的顺序是乱的
+                        if received_msg.block_index == i:    # right sequence
+                            if block_num == received_msg.block_index:  # last block?
+                                resend_flag = 0  # all received
+                        else:   # wrong sequence
                             resend_flag = 1
                             break
 
             except socket.timeout:
                 print('client timeout, requiring resend')
                 resend_flag = 1
-            # 要求客户端重发信息
+            # urge to resend message
             if resend_flag == 1:
                 requiring_resend_block = Message(
                     0, 26, 1, 1, "Error: resend the request!")
@@ -160,13 +159,13 @@ def start_server(semantics):
             # receive complete msg
             else:
                 original_text, identifier = unmarshalling(msg_block_list)
-                # 成功收到正确信息
+                # Successfully received the correct information
                 request_id = identifier
                 operation = original_text
                 server_socket.settimeout(0)
                 break
 
-        # 接收完请求信息，开始执行请求
+        # After receiving the request information, the request is executed
         if operation == "exit":
             # response = "client exit"
             args = operation
@@ -209,7 +208,7 @@ def start_server(semantics):
         # Send response
         # test for packet loss
         i = random.randint(0, 10)
-        if i < 5:
+        if i < 11:
             print(f"Sending response: {response}")
             if response == "exit":
                 break
