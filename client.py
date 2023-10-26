@@ -85,11 +85,16 @@ def receive_message(socket1: socket, server_addr, timeout=10):
 def echo_response(msg_list, response_text):
     # function_name = options[msg_list[0]]['function_name']
     function_name = msg_list[0]
+
     if function_name == 'read_file':
-        content = response_text
+        # content = response_text.split("$")
         print("Read success! The contents of the file are as follows:")
         # print(content.decode('utf-8'))
-        print(content)
+        offset = int(msg_list[2])
+        length_to_read = int(msg_list[3])
+        text = response_text
+        text1 = text[offset:offset+length_to_read]
+        print(text1)
 
     elif function_name == 'insert_content':
         if response_text == "Insertion successful":
@@ -130,6 +135,7 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
     c = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     identifier = 0
     read_buffer = {}
+    cache_list = []
     # terminal interacting panel
     while True:
         print("\n==============function list=================")
@@ -148,22 +154,71 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
             num_params = options[choice]['params']
             parameters = get_parameters(num_params)
 
-            if choice == "1":
-                # read function, use cache
-                result = read_buffer.get(tuple(parameters))
-                # not cached
-                if result == None:
-                    pass    # normal read request
-                else:
-                    [response, cached_time] = result
-                    print("***cache spotted!**")
-                    if time.time() - cached_time <= freshness_interval:
+            if choice == "1":   # read function, use cache
+                
+                # cache_list: [file_name, validated_time, modified_time, full_file]
+                file_name = parameters[0]
+                msg_list = [options[choice]['function_name']] + parameters
+
+                # check whether file is in the cache 
+                cached_file = next((item for item in cache_list if item[0] == file_name), None)
+                current_time = time.time()
+                # cache spotted:
+                if cached_file:
+                    print("***cache spotted!***")
+                    modified_time = cached_file[1]
+
+                    # check whether cache is valid, using freshness_interval
+                    if time.time() - modified_time <= freshness_interval:
+                        respond_msg = cached_file[3]
                         print("***cache used!***")
-                        msg_list = [options[choice]['function_name']] + parameters
-                        echo_response(msg_list, response)
-                        continue    # end request, goto next input
+                        echo_response(msg_list, respond_msg)
+                        continue
                     else:
-                        print("**Sorry, cache expired!**")
+                        # update modified_time
+                        msg_list1 = ["get_modified_time",file_name]
+                        request_msg = f"{','.join(msg_list1)}"
+                        identifier = (identifier + 1)% 256
+                        send_message(c, server_addr, request_msg, identifier)
+                        print("***modified_time requested!***")
+                        modified_time_new, _ = receive_message(c, server_addr, timeout=100)
+                        print("***modified_time got!***")
+                        
+
+                        if float(modified_time_new) == float(cached_file[2]):  # file didn't change
+                            print("***modified_time same, still use cache!***")
+                            cached_file[1] = current_time
+                            # still use cache
+                            respond_msg = cached_file[3]
+                            print("***cache used!***")
+                            echo_response(msg_list, respond_msg)
+                            continue
+                        else:   # file changed
+                            print("**modified_time changed, cache expired!**")
+                            cache_list.remove(cached_file)
+                            pass
+                else:           # not in cache 
+                    pass        # requeat normally
+
+
+
+
+
+
+                # result = read_buffer.get(tuple(parameters))
+                # # not cached
+                # if result == None:
+                #     pass    # normal read request
+                # else:
+                #     [response, cached_time] = result
+                #     print("***cache spotted!**")
+                #     if time.time() - cached_time <= freshness_interval:
+                #         print("***cache used!***")
+                #         msg_list = [options[choice]['function_name']] + parameters
+                #         echo_response(msg_list, response)
+                #         continue    # end request, goto next input
+                #     else:
+                #         print("**Sorry, cache expired!**")
 
             # Generate request message
             if choice == "6":   # manually input
@@ -189,17 +244,18 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
                 # successfully received response
                 else:
                     success = 1
-                    # print("success return!")
                     # print("Received response:", response_text)
 
                     # Action after receiving
-                    if choice != "3":
-                        echo_response(msg_list, response_text)
-
-                        # Read something new. Update the cache
-                        if choice == "1":
-                            read_buffer[tuple(parameters)] = [response_text, time.time()]
-                            # print("cache:\n", read_buffer)
+                    if choice == "1":   # Read something new. Update the cache
+                        # update cache
+                        if response_text != "File does not exist!":
+                            modified_time, full_file = response_text.split('$')
+                            cache_list.append([file_name, time.time(), modified_time, full_file])
+                            print("cache:\n", cache_list)
+                            echo_response(msg_list, full_file)
+                        else:
+                            echo_response(msg_list, response_text)
 
                     elif choice == "3":  # Listening for updates
                         if response_text == "Monitor started":
@@ -219,7 +275,9 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
                                         # No data is coming. Keep waiting
                                         pass
                         else:
-                            print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                            print("Monitor didn't started!")
+                    else:
+                        echo_response(msg_list, response_text)
         else:   # choice input is not in selection list
             print("Invalid selection, please re-enter!")
     return c

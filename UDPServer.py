@@ -15,12 +15,18 @@ def read_file(pathname, offset, read_length):
     if offset > file_size:
         return "Offset exceeds file size!"
 
-    with open(pathname, 'rb') as f:
-        f.seek(offset)
-        content = f.read(read_length)
+    with open(pathname, 'r') as f:
+        # f.seek(offset)
+        # content = f.read(read_length)
+        # read and return full file
+        modified_time = os.path.getmtime(pathname)
+        content = f"{'$'.join([str(modified_time), str(f.read())])}"
 
     return str(content)
 
+def get_modified_time(file_name):
+    modified_time = os.path.getmtime(file_name)
+    return str(modified_time)
 
 def insert_content(pathname, offset, sequence):
 
@@ -189,6 +195,8 @@ def start_server(semantics, server_addr):
 
             if args[0] == "read_file":
                 response = read_file(args[1], int(args[2]), int(args[3]))
+            elif args[0] == "get_modified_time":
+                response = get_modified_time(args[1])
             elif args[0] == "insert_content":
                 response = insert_content(args[1], int(args[2]), args[3])
             elif args[0] == "monitor_updates":
