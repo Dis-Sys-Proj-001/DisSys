@@ -105,14 +105,8 @@ def rename_file(old_path, new_name):
 def start_server(semantics, server_addr):
     # Create a UDP socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-
-    # server_socket.bind(('localhost', 25896))
-    # server_socket.bind(('192.168.0.243', 2222))
     server_socket.bind(server_addr)
-
     print('UDP Server on', server_addr[0], ":", server_addr[1], "......")
-    # print('UDP Server on', '127.0.0.1', ":", 25896, "......")
 
     # Store processed request IDs for deduplication (only used in "at-most-once" mode)
     processed_request_ids = set()
@@ -122,50 +116,54 @@ def start_server(semantics, server_addr):
     buffer = []
 
     while True:
+        resend_flag = 1  # Resend flag, if 1 in the end, there is a reception error
         resend_times = 0
-        resend_flag = 1
         while resend_flag == 1 and resend_times < 10:
+            # sending timeout is set via socket's timeout settings
+            server_socket.setblocking(True)
             try:
-                server_socket.setblocking(True)
-                msg_block, address = server_socket.recvfrom(
-                    512)
-                msg_block_list = [msg_block]
-                received_msg = deserialize(msg_block_list[0])
-                block_num = received_msg.total_blocks
-                print("Received message:", received_msg.data.decode("utf-8"))
-                if received_msg.block_index != 0:  # The first block received is not the first block; something must be wrong, probably a lost message
-                    pass    # problem
-                elif block_num == 1:    # single block
-                    resend_flag = 0  # receiving message succeed
-                elif block_num != 1:  # multiply blocks
-                    # Sets the timeout in seconds
-                    server_socket.settimeout(5.0)
-                    for i in range(1, block_num):
-                        # The subsequent blocks are received one by one
-                        msg_block, _ = server_socket.recvfrom(512)
-                        msg_block_list.append(msg_block)
-                        received_msg = deserialize(msg_block_list[-1])
-                        if received_msg.block_index == i:    # right sequence
-                            if block_num == received_msg.block_index:  # last block?
-                                resend_flag = 0  # all received
-                        else:   # wrong sequence
-                            resend_flag = 1
-                            break
+                # get the first block
+                msg_byte, address = server_socket.recvfrom(512)
+                msg_byte_list = [msg_byte]
+                msg_rev_obj = deserialize(msg_byte_list[0])
+                block_num = msg_rev_obj.total_blocks
+                print("Received message:", msg_rev_obj.data.decode("utf-8"))
 
-            except socket.timeout:
+                if msg_rev_obj.block_index == 0:        # first block received is not the first block in message
+                    if block_num == 1:                  # single block
+                        resend_flag = 0                 # All blocks received!
+                    elif block_num != 1:                # multiple blocks
+                        server_socket.settimeout(5.0)   # Set the timeout in seconds
+                        for i in range(1, block_num):   # get subsequent blocks sequentially
+                            msg_byte, _ = server_socket.recvfrom(512)
+                            msg_byte_list.append(msg_byte)
+                            msg_rev_obj = deserialize(msg_byte_list[-1])
+                            if msg_rev_obj.block_index == i:              # right sequence
+                                if block_num == msg_rev_obj.block_index:  # last block?
+                                    resend_flag = 0     # All blocks received!
+                            else:                       # wrong sequence
+                                resend_flag = 1
+                                break
+                else:       # first block received is not the first block in message
+                    resend_flag = 1
+            except socket.timeout:                      # timeout when receiving messages
                 print('client timeout, requiring resend')
                 resend_flag = 1
+            # Full message received, unmarshalling and hash test
+            try:
+                original_text, identifier = unmarshalling(msg_byte_list)
+                if original_text == False:  # hash test failed
+                    resend_flag = 1
+            except Exception:               # exceptions in unmarshalling
+                resend_flag = 1
+
             # urge to resend message
             if resend_flag == 1:
-                requiring_resend_block = Message(
-                    0, 26, 1, 1, "Error: resend the request!")
-                server_socket.sendto(serialize(
-                    requiring_resend_block), address)
+                requiring_resend_block = Message(0, 26, 1, 1, "Error: resend the request!")
+                server_socket.sendto(serialize(requiring_resend_block), address)
                 resend_times += 1
-            # receive complete msg
+            # correct message successfully received
             else:
-                original_text, identifier = unmarshalling(msg_block_list)
-                # Successfully received the correct information
                 request_id = identifier
                 operation = original_text
                 server_socket.settimeout(0)
@@ -195,12 +193,9 @@ def start_server(semantics, server_addr):
                 response = insert_content(args[1], int(args[2]), args[3])
             elif args[0] == "monitor_updates":
                 response = "Monitor started"
-
                 msg_list = marshalling(response, 0)
                 for msg in msg_list:
                     server_socket.sendto(msg, address)
-
-
                 monitor_updates(args[1], int(args[2]),address, address_list, server_socket)
             elif args[0] == "file_list":
                 response = file_list(args[1])

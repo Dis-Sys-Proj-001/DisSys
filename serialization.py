@@ -1,10 +1,3 @@
-# -*- coding = utf-8 -*-
-# @Time : 2023/10/24 22:53
-# @Author:
-# @File : serialization.py
-# @software: PyCharm
-
-
 import struct
 import hashlib
 BLOCK_SIZE = 496
@@ -18,13 +11,13 @@ class Message:
         self.data = data
 
 def serialize(msg):
-    # 封装消息为一个字节对象
-    fmt = f'I I I I {BLOCK_SIZE}s'  # 创建格式字符串
+    # Encapsulate the message as a bytes object
+    fmt = f'I I I I {BLOCK_SIZE}s'  # Create formatted string
     packed_data = struct.pack(fmt, msg.identifier, msg.length, msg.block_index, msg.total_blocks, msg.data.encode('utf-8'))
     return packed_data
 
 def deserialize(packed_data):
-    # 解封装字节对象为一个消息对象
+    # Unpack the bytes object into a message object
     fmt = f'I I I I {BLOCK_SIZE}s'
     print("deserialize in process!")
     unpacked_data = struct.unpack(fmt, packed_data)
@@ -32,7 +25,7 @@ def deserialize(packed_data):
     return Message(*modified_data)
 
 def test():
-    #单个block ce shi
+    # single block test
     input_msg = input("Enter for a test(less than 256):")
     input_msg_len = len(input_msg)
     date_type = 1 if not input_msg.isdigit() else 2
@@ -79,7 +72,7 @@ def unmarshalling(marshalling_block):
         else:
             return False, identifier
         res = "".join([str(i) for i in text])
-    # 下面，检验hash是否一致，不一致则 值返回False与identifier
+    # Check whether the hash is consistent. If it is inconsistent, the value returns False and identifier.
     if hashlib.md5(res.encode("utf-8")).hexdigest() == list[total_num-1].data.rstrip(b'\0').decode("utf-8"):
         return res, identifier
     else:
@@ -88,27 +81,23 @@ def unmarshalling(marshalling_block):
     return res, identifier
 
 if __name__ == "__main__":
-    """
-    调用测试，，，
-        """
-    ## marshalling需要两个参数，要发送的字符串与identifier
-    text = input("input") # 任意字符串传入
-    identifier = 9276239 #
-    byte_arrays = marshalling(text, identifier) # marshalling后，是比特流，通过socket发送
+    ## Marshalling requires two parameters, the string to be sent and the identifier
+    text = input("input") # any string
+    identifier = 4444444 #
+    byte_arrays = marshalling(text, identifier) # after marshalling, it is a bit stream, sent through the socket
+    print(len(byte_arrays))
+    print(len(byte_arrays[0]))
+    print("Byte stream is: ",byte_arrays)
 
-    print("比特流是：",byte_arrays)
-
-    ## 一个参数，既 收到的比特流
-    original_text, the_identifier = unmarshalling(marshalling_block=byte_arrays) #返回 原字符串及其identifier
-    print("最初文本是",original_text)
+    ## one parameter, i.e. the received bit stream
+    original_text, the_identifier = unmarshalling(marshalling_block=byte_arrays) # return original text and its identifier
+    print("Initial text is: ",original_text)
     print("identifier:",the_identifier)
 
-    """
-        fault torlerance:
-            """
+    ## fault torlerance:
     # original_text, the_identifier = unmarshalling(marshalling_block=byte_arrays) # 如果有误， original_text将会是False
     if original_text != False:
-        pass #正常情况...
+        pass # normal...
     else:
         print("something wrong")
-        pass # 错误情况...
+        pass # faulty...

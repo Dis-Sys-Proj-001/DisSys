@@ -38,28 +38,27 @@ def receive_message(socket1: socket, server_addr, timeout=10):
             # get the first block
             msg_byte, Saddr = socket1.recvfrom(512)
             msg_byte_list = [msg_byte, ]
-            msg_object_temp = deserialize(msg_byte_list[0])
-            block_num = msg_object_temp.total_blocks
-            if msg_object_temp.block_index == 0:        # first block received is not the first block in message
+            msg_rev_obj = deserialize(msg_byte_list[0])
+            block_num = msg_rev_obj.total_blocks
+            if msg_rev_obj.block_index == 0:        # first block received is not the first block in message
                 # single block message
                 if block_num == 1:
-                    resend_flag = 0                     # All blocks got!
+                    resend_flag = 0                 # All blocks received!
                 # multiple block message
                 elif block_num != 1:
-                    for i in range(1, block_num):
-                        # get other blocks sequentially
+                    for i in range(1, block_num):   # get subsequent blocks sequentially
                         msg_byte, Saddr1 = socket1.recvfrom(512)
                         msg_byte_list.append(msg_byte)
-                        msg_object_temp = deserialize(msg_byte_list[-1])
-                        if msg_object_temp.block_index == i:                # new block is in the right sequence
-                            if block_num == msg_object_temp.block_index:    # lastblock?
-                                resend_flag = 0          # All blocks got!
-                        else:   # wrong sequence
+                        msg_rev_obj = deserialize(msg_byte_list[-1])
+                        if msg_rev_obj.block_index == i:                # new block is in the right sequence
+                            if block_num == msg_rev_obj.block_index:    # lastblock?
+                                resend_flag = 0     # All blocks received!
+                        else:                       # wrong sequence
                             resend_flag = 1
                             break
-            else:               # first block received is not the first block in message
+            else:       # first block received is not the first block in message
                 resend_flag = 1
-        except socket.timeout:  # timeout when receiving messages
+        except socket.timeout:                      # timeout when receiving messages
             print("Receive operation timed out")
             resend_flag = 1
         # Full message received, unmarshalling and hash test
@@ -160,8 +159,7 @@ def start_Client(server_addr=('127.0.0.1', 25896), freshness_interval=10, semant
                     print("***cache spotted!**")
                     if time.time() - cached_time <= freshness_interval:
                         print("***cache used!***")
-                        msg_list = [options[choice]
-                                    ['function_name']] + parameters
+                        msg_list = [options[choice]['function_name']] + parameters
                         echo_response(msg_list, response)
                         continue    # end request, goto next input
                     else:
