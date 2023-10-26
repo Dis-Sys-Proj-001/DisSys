@@ -4,7 +4,6 @@
 # @File : serialization.py
 # @software: PyCharm
 
-# 我咋觉得这个新写的部分哈希那块有个参数长度问题报错
 
 import struct
 import hashlib

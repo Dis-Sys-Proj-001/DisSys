@@ -193,7 +193,10 @@ def start_server(semantics):
                                 address, address_list, server_socket)
             elif args[0] == "file_list":
                 response = file_list(args[1])
-                response = ','.join(response)
+                if response == "Path not found!":
+                    pass
+                else:
+                    response = ','.join(response)
             elif args[0] == "rename_file":
                 response = rename_file(args[1], args[2])
             elif args[0] == "exit":
