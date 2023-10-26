@@ -85,8 +85,8 @@ def file_list(pathname):
     try:
         items = os.listdir(pathname)
         return items
-    except FileNotFoundError:
-        return "Path not found!"
+    except FileNotFoundError and NotADirectoryError:
+        return "Path error or not found!"
 
 
 def rename_file(old_path, new_name):
@@ -188,12 +188,12 @@ def start_server(semantics):
             elif args[0] == "insert_content":
                 response = insert_content(args[1], int(args[2]), args[3])
             elif args[0] == "monitor_updates":
-                response = "Monitoring started"
+                # response = "Monitoring started"
                 monitor_updates(args[1], int(args[2]),
                                 address, address_list, server_socket)
             elif args[0] == "file_list":
                 response = file_list(args[1])
-                if response == "Path not found!":
+                if response == "Path error or not found!":
                     pass
                 else:
                     response = ','.join(response)
@@ -225,4 +225,7 @@ def start_server(semantics):
 
 
 if __name__ == "__main__":
-    start_server("at-least-once")
+    semantic = input("Choose server mode:[M/L]")
+    semantic = "at-most-once" if semantic == "M" else semantic == "at-least-once"
+    print('Server mode:', semantic)
+    start_server(semantic)
